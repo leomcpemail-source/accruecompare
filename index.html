@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opex Accrual Comparison</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .upload-section {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .upload-box {
+            background: white;
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .upload-box:hover {
+            border-color: #764ba2;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .upload-box.has-file {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+
+        .upload-box input[type="file"] {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .upload-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+
+        .upload-box .file-name {
+            color: #48bb78;
+            font-weight: bold;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+
+        .compare-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px 50px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .compare-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+
+        .compare-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results {
+            padding: 40px;
+            display: none;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .stat-card h3 {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+
+        .severity-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .severity-card {
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .severity-card.critical {
+            background: #fee;
+            border-left: 5px solid #e53e3e;
+        }
+
+        .severity-card.medium {
+            background: #fef5e7;
+            border-left: 5px solid #f6ad55;
+        }
+
+        .severity-card.low {
+            background: #e6fffa;
+            border-left: 5px solid #38b2ac;
+        }
+
+        .severity-card h4 {
+            margin-bottom: 10px;
+        }
+
+        .severity-card .count {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 12px 25px;
+            border: none;
+            background: #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .badge.critical {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .badge.medium {
+            background: #f6ad55;
+            color: white;
+        }
+
+        .badge.low {
+            background: #38b2ac;
+            color: white;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .export-btn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .export-btn:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .upload-section {
+                padding: 20px;
+            }
+
+            .upload-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card .value {
+                font-size: 2rem;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Opex Accrual Comparison Tool</h1>
+            <p>เปรียบเทียบข้อมูล Accrual ระหว่างไฟล์เก่าและใหม่</p>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-grid">
+                <div class="upload-box" id="oldFileBox" onclick="document.getElementById('oldFile').click()">
+                    <input type="file" id="oldFile" accept=".xlsx,.xls">
+                    <div class="upload-icon">📁</div>
+                    <h3>Old File</h3>
+                    <p>คลิกเพื่อเลือกไฟล์เก่า</p>
+                    <div class="file-name" id="oldFileName"></div>
+                </div>
+
+                <div class="upload-box" id="newFileBox" onclick="document.getElementById('newFile').click()">
+                    <input type="file" id="newFile" accept=".xlsx,.xls">
+                    <div class="upload-icon">📁</div>
+                    <h3>New File</h3>
+                    <p>คลิกเพื่อเลือกไฟล์ใหม่</p>
+                    <div class="file-name" id="newFileName"></div>
+                </div>
+            </div>
+
+            <button class="compare-btn" id="compareBtn" disabled>
+                🔍 เปรียบเทียบข้อมูล
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>กำลังประมวลผล กรุณารอสักครู่...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="dashboard">
+                <div class="stat-card">
+                    <h3>Total Changes</h3>
+                    <div class="value" id="totalChanges">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>New Entries</h3>
+                    <div class="value" id="newEntries">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Data Mismatches</h3>
+                    <div class="value" id="dataMismatches">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Removed Rows</h3>
+                    <div class="value" id="removedRows">0</div>
+                </div>
+            </div>
+
+            <div class="severity-summary">
+                <div class="severity-card critical">
+                    <h4>🔴 Critical</h4>
+                    <div class="count" id="criticalCount">0</div>
+                </div>
+                <div class="severity-card medium">
+                    <h4>🟡 Medium</h4>
+                    <div class="count" id="mediumCount">0</div>
+                </div>
+                <div class="severity-card low">
+                    <h4>🟢 Low</h4>
+                    <div class="count" id="lowCount">0</div>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <div class="filter-grid">
+                    <div class="filter-group">
+                        <label>Severity Filter</label>
+                        <select id="severityFilter">
+                            <option value="">All</option>
+                            <option value="1-Critical">Critical</option>
+                            <option value="2-Medium">Medium</option>
+                            <option value="3-Low">Low</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Status Filter</label>
+                        <select id="statusFilter">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Search OR Order</label>
+                        <input type="text" id="orSearch" placeholder="ค้นหา OR Order...">
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <button class="export-btn" onclick="exportToExcel()">📥 Export to Excel</button>
+                <button class="export-btn" onclick="exportToCSV()">📄 Export to CSV</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('all')">ทั้งหมด</button>
+                <button class="tab-btn" onclick="switchTab('newEntry')">New Entry</button>
+                <button class="tab-btn" onclick="switchTab('mismatch')">Data Mismatch</button>
+                <button class="tab-btn" onclick="switchTab('removed')">Removed Row</button>
+            </div>
+
+            <div id="all" class="tab-content active">
+                <div class="table-container">
+                    <table id="allTable">
+                        <thead>
+                            <tr>
+                                <th>OR Order</th>
+                                <th>File Name</th>
+                                <th>Severity</th>
+                                <th>Status</th>
+                                <th>Field Name</th>
+                                <th>Old Value</th>
+                                <th>New Value</th>
+                                <th>Difference</th>
+                                <th>Monthly Invoice</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="newEntry" class="tab-content">
+                <div class="table-container">
+                    <table id="newEntryTable">
+                        <thead>
+                            <tr>
+                                <th>OR Order</th>
+                                <th>PTT Order</th>
+                                <th>Plant</th>
+                                <th>Description</th>
+                                <th>Estimate Cost</th>
+                                <th>Monthly Invoice</th>
+                                <th>Posting Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="newEntryTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="mismatch" class="tab-content">
+                <div class="table-container">
+                    <table id="mismatchTable">
+                        <thead>
+                            <tr>
+                                <th>OR Order</th>
+                                <th>PTT Order</th>
+                                <th>Plant</th>
+                                <th>Description</th>
+                                <th>Monthly Invoice</th>
+                                <th>Posting Date</th>
+                                <th>Approve Status</th>
+                                <th>OR Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mismatchTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="removed" class="tab-content">
+                <div class="table-container">
+                    <table id="removedTable">
+                        <thead>
+                            <tr>
+                                <th>OR Order</th>
+                                <th>PTT Order</th>
+                                <th>Plant</th>
+                                <th>Description</th>
+                                <th>Monthly Invoice</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="removedTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let oldFileData = null;
+        let newFileData = null;
+        let comparisonResults = null;
+
+        // File upload handlers
+        document.getElementById('oldFile').addEventListener('change', function(e) {
+            handleFileUpload(e.target.files[0], 'old');
+        });
+
+        document.getElementById('newFile').addEventListener('change', function(e) {
+            handleFileUpload(e.target.files[0], 'new');
+        });
+
+        function handleFileUpload(file, type) {
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                
+                if (type === 'old') {
+                    oldFileData = parseWorkbook(workbook, file.name);
+                    document.getElementById('oldFileName').textContent = file.name;
+                    document.getElementById('oldFileBox').classList.add('has-file');
+                } else {
+                    newFileData = parseWorkbook(workbook, file.name);
+                    document.getElementById('newFileName').textContent = file.name;
+                    document.getElementById('newFileBox').classList.add('has-file');
+                }
+
+                checkReadyToCompare();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseWorkbook(workbook, fileName) {
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+            
+            // Parse headers and data
+            const headers = jsonData[0];
+            const rows = jsonData.slice(1).filter(row => row.some(cell => cell !== null && cell !== undefined && cell !== ''));
+            
+            return {
+                fileName: fileName,
+                headers: headers,
+                rows: rows
+            };
+        }
+
+        function checkReadyToCompare() {
+            const btn = document.getElementById('compareBtn');
+            if (oldFileData && newFileData) {
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById('compareBtn').addEventListener('click', async function() {
+            document.getElementById('loading').classList.add('active');
+            
+            // Simulate processing delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            compareData();
+            
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('results').style.display = 'block';
+            
+            // Smooth scroll to results
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        function compareData() {
+            const newEntries = [];
+            const dataMismatches = [];
+            const removedRows = [];
+            const changeSummary = [];
+
+            // Create lookup maps - must use both OR Order AND Posting Date
+            const oldMap = createLookupMap(oldFileData.rows, oldFileData.headers);
+            const newMap = createLookupMap(newFileData.rows, newFileData.headers);
+
+            // Find column indices for new file
+            const newOrOrderIdx = newFileData.headers.findIndex(h => h === 'OR Order');
+            const newPostingDateIdx = newFileData.headers.findIndex(h => h === 'Posting date');
+            const newMonthlyInvoiceIdx = newFileData.headers.findIndex(h => h === 'Monthly OR Invoice');
+            const newMonthlyActualIdx = newFileData.headers.findIndex(h => h === 'Monthly OR Actual Cost');
+            const newApproveStatusIdx = newFileData.headers.findIndex(h => h === 'PTT Approve Status');
+            const newORStatusIdx = newFileData.headers.findIndex(h => h === 'OR User Status');
+
+            // Find column indices for old file
+            const oldOrOrderIdx = oldFileData.headers.findIndex(h => h === 'OR Order');
+            const oldPostingDateIdx = oldFileData.headers.findIndex(h => h === 'Posting date');
+            const oldMonthlyInvoiceIdx = oldFileData.headers.findIndex(h => h === 'Monthly OR Invoice');
+
+            // Find new entries and mismatches
+            newFileData.rows.forEach((newRow, idx) => {
+                const orOrder = newRow[newOrOrderIdx];
+                const postingDate = newRow[newPostingDateIdx];
+                
+                // Skip empty rows
+                if (!orOrder) return;
+                
+                const key = createCompositeKey(orOrder, postingDate);
+
+                if (!oldMap.has(key)) {
+                    // New entry - this combination of OR Order + Posting Date doesn't exist in old file
+                    newEntries.push(newRow);
+                    
+                    const severity = calculateSeverity(postingDate);
+                    const monthlyInvoice = newRow[newMonthlyInvoiceIdx] || 0;
+                    
+                    changeSummary.push({
+                        orOrder: orOrder,
+                        fileName: newFileData.fileName,
+                        rowIndex: idx + 2,
+                        severity: severity,
+                        status: 'New Entry (OR + Date)',
+                        fieldName: null,
+                        oldValue: null,
+                        newValue: formatDateThai(postingDate),
+                        difference: null,
+                        monthlyInvoice: monthlyInvoice
+                    });
+                } else {
+                    // Entry exists - check for field mismatches
+                    const oldRow = oldMap.get(key);
+                    const mismatches = findRowDifferences(
+                        oldRow, 
+                        newRow, 
+                        oldFileData.headers, 
+                        newFileData.headers,
+                        oldMonthlyInvoiceIdx,
+                        newMonthlyInvoiceIdx,
+                        newMonthlyActualIdx,
+                        newApproveStatusIdx,
+                        newORStatusIdx
+                    );
+                    
+                    if (mismatches.length > 0) {
+                        // Add to mismatch list only once per OR+Date combination
+                        if (!dataMismatches.find(r => 
+                            r[newOrOrderIdx] === orOrder && 
+                            formatDateISO(r[newPostingDateIdx]) === formatDateISO(postingDate)
+                        )) {
+                            dataMismatches.push(newRow);
+                        }
+                        
+                        mismatches.forEach(mismatch => {
+                            const severity = calculateSeverity(postingDate);
+                            changeSummary.push({
+                                orOrder: orOrder,
+                                fileName: newFileData.fileName,
+                                rowIndex: idx + 2,
+                                severity: severity,
+                                status: 'Data Mismatch',
+                                fieldName: mismatch.field,
+                                oldValue: mismatch.oldValue,
+                                newValue: mismatch.newValue,
+                                difference: mismatch.difference,
+                                monthlyInvoice: newRow[newMonthlyInvoiceIdx] || 0
+                            });
+                        });
+                    }
+                }
+            });
+
+            // Find removed rows
+            oldFileData.rows.forEach((oldRow, idx) => {
+                const orOrder = oldRow[oldOrOrderIdx];
+                const postingDate = oldRow[oldPostingDateIdx];
+                
+                // Skip empty rows
+                if (!orOrder) return;
+                
+                const key = createCompositeKey(orOrder, postingDate);
+
+                if (!newMap.has(key)) {
+                    removedRows.push(oldRow);
+                    
+                    const severity = calculateSeverity(postingDate);
+                    const monthlyInvoice = oldRow[oldMonthlyInvoiceIdx] || 0;
+                    
+                    changeSummary.push({
+                        orOrder: orOrder,
+                        fileName: oldFileData.fileName,
+                        rowIndex: idx + 2,
+                        severity: severity,
+                        status: 'Removed Row (OR + Date)',
+                        fieldName: null,
+                        oldValue: formatDateThai(postingDate),
+                        newValue: null,
+                        difference: null,
+                        monthlyInvoice: monthlyInvoice
+                    });
+                }
+            });
+
+            comparisonResults = {
+                changeSummary: changeSummary,
+                newEntries: newEntries,
+                dataMismatches: dataMismatches,
+                removedRows: removedRows
+            };
+
+            displayResults();
+        }
+
+        function createCompositeKey(orOrder, postingDate) {
+            // Normalize the date to ISO format for consistent comparison
+            const dateStr = formatDateISO(postingDate);
+            return `${orOrder}|${dateStr}`;
+        }
+
+        function formatDateISO(date) {
+            if (!date) return '';
+            
+            if (date instanceof Date) {
+                return date.toISOString().split('T')[0];
+            }
+            
+            if (typeof date === 'number') {
+                // Excel date serial number (days since 1900-01-01, with 1900 incorrectly treated as leap year)
+                const excelEpoch = new Date(1899, 11, 30); // December 30, 1899
+                const jsDate = new Date(excelEpoch.getTime() + date * 86400000);
+                return jsDate.toISOString().split('T')[0];
+            }
+            
+            if (typeof date === 'string') {
+                // Try to parse various date formats
+                const parsed = new Date(date);
+                if (!isNaN(parsed.getTime())) {
+                    return parsed.toISOString().split('T')[0];
+                }
+            }
+            
+            return String(date);
+        }
+
+        function formatDateThai(date) {
+            // Convert to Thai Buddhist calendar format (31/12/2567)
+            const isoDate = formatDateISO(date);
+            if (!isoDate || isoDate === '') return '';
+            
+            try {
+                const parts = isoDate.split('-');
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]);
+                const day = parseInt(parts[2]);
+                
+                // Convert to Buddhist year (add 543)
+                const thaiYear = year + 543;
+                
+                // Format as DD/MM/YYYY in Thai
+                return `${day}/${month}/${thaiYear}`;
+            } catch (e) {
+                return isoDate;
+            }
+        }
+
+        function createLookupMap(rows, headers) {
+            const map = new Map();
+            const orOrderIdx = headers.findIndex(h => h === 'OR Order');
+            const postingDateIdx = headers.findIndex(h => h === 'Posting date');
+
+            if (orOrderIdx === -1 || postingDateIdx === -1) {
+                console.error('Required columns not found');
+                return map;
+            }
+
+            rows.forEach((row, idx) => {
+                const orOrder = row[orOrderIdx];
+                const postingDate = row[postingDateIdx];
+                
+                // Skip rows without OR Order
+                if (!orOrder) return;
+                
+                const key = createCompositeKey(orOrder, postingDate);
+                
+                // Store the row with its original index
+                map.set(key, row);
+            });
+
+            return map;
+        }
+
+        function findRowDifferences(oldRow, newRow, oldHeaders, newHeaders, oldMonthlyInvoiceIdx, newMonthlyInvoiceIdx, newMonthlyActualIdx, newApproveStatusIdx, newORStatusIdx) {
+            const differences = [];
+            
+            // Define which fields to compare
+            const compareFields = [
+                { name: 'Monthly OR Invoice', oldIdx: oldMonthlyInvoiceIdx, newIdx: newMonthlyInvoiceIdx },
+                { name: 'Monthly OR Actual Cost', oldIdx: oldMonthlyInvoiceIdx, newIdx: newMonthlyActualIdx }, // Compare invoice vs actual
+                { name: 'PTT Approve Status', oldIdx: oldHeaders.findIndex(h => h === 'PTT Approve Status'), newIdx: newApproveStatusIdx },
+                { name: 'OR User Status', oldIdx: oldHeaders.findIndex(h => h === 'OR User Status'), newIdx: newORStatusIdx }
+            ];
+
+            compareFields.forEach(field => {
+                if (field.oldIdx === -1 || field.newIdx === -1) return;
+                
+                const oldVal = oldRow[field.oldIdx];
+                const newVal = newRow[field.newIdx];
+
+                // Compare values - handle null/undefined/empty
+                const oldNormalized = normalizeValue(oldVal);
+                const newNormalized = normalizeValue(newVal);
+
+                if (oldNormalized !== newNormalized) {
+                    let diff = null;
+                    
+                    // Calculate numeric difference for invoice/cost fields
+                    if (typeof oldNormalized === 'number' && typeof newNormalized === 'number') {
+                        diff = newNormalized - oldNormalized;
+                    }
+
+                    differences.push({
+                        field: field.name,
+                        oldValue: oldVal,
+                        newValue: newVal,
+                        difference: diff
+                    });
+                }
+            });
+
+            return differences;
+        }
+
+        function normalizeValue(value) {
+            // Normalize for comparison
+            if (value === null || value === undefined || value === '') {
+                return null;
+            }
+            
+            if (typeof value === 'number') {
+                return value;
+            }
+            
+            if (typeof value === 'string') {
+                const trimmed = value.trim();
+                if (trimmed === '') return null;
+                
+                // Try to parse as number
+                const num = parseFloat(trimmed);
+                if (!isNaN(num)) return num;
+                
+                return trimmed;
+            }
+            
+            return value;
+        }
+
+        function calculateSeverity(postingDate) {
+            if (!postingDate) return '3-Low';
+            
+            try {
+                const today = new Date();
+                const postDateISO = formatDateISO(postingDate);
+                const postDate = new Date(postDateISO);
+                
+                if (isNaN(postDate.getTime())) return '3-Low';
+                
+                // Calculate month difference
+                const yearDiff = today.getFullYear() - postDate.getFullYear();
+                const monthDiff = today.getMonth() - postDate.getMonth();
+                const totalMonthsDiff = yearDiff * 12 + monthDiff;
+
+                // Severity based on how old the posting date is
+                if (totalMonthsDiff >= 4) return '1-Critical';
+                if (totalMonthsDiff >= 2) return '2-Medium';
+                return '3-Low';
+            } catch (e) {
+                return '3-Low';
+            }
+        }
+
+        function displayResults() {
+            const { changeSummary, newEntries, dataMismatches, removedRows } = comparisonResults;
+
+            // Update dashboard
+            document.getElementById('totalChanges').textContent = changeSummary.length;
+            document.getElementById('newEntries').textContent = newEntries.length;
+            document.getElementById('dataMismatches').textContent = dataMismatches.length;
+            document.getElementById('removedRows').textContent = removedRows.length;
+
+            // Count severity
+            const severityCounts = {
+                '1-Critical': 0,
+                '2-Medium': 0,
+                '3-Low': 0
+            };
+
+            changeSummary.forEach(item => {
+                severityCounts[item.severity]++;
+            });
+
+            document.getElementById('criticalCount').textContent = severityCounts['1-Critical'];
+            document.getElementById('mediumCount').textContent = severityCounts['2-Medium'];
+            document.getElementById('lowCount').textContent = severityCounts['3-Low'];
+
+            // Populate status filter
+            const statuses = [...new Set(changeSummary.map(item => item.status))];
+            const statusFilter = document.getElementById('statusFilter');
+            statusFilter.innerHTML = '<option value="">All</option>';
+            statuses.forEach(status => {
+                const option = document.createElement('option');
+                option.value = status;
+                option.textContent = status;
+                statusFilter.appendChild(option);
+            });
+
+            // Display tables
+            displayChangeSummaryTable(changeSummary);
+            displayNewEntriesTable(newEntries);
+            displayMismatchesTable(dataMismatches);
+            displayRemovedTable(removedRows);
+
+            // Add filter listeners
+            document.getElementById('severityFilter').addEventListener('change', filterTables);
+            document.getElementById('statusFilter').addEventListener('change', filterTables);
+            document.getElementById('orSearch').addEventListener('input', filterTables);
+        }
+
+        function displayChangeSummaryTable(data) {
+            const tbody = document.getElementById('allTableBody');
+            tbody.innerHTML = '';
+
+            data.forEach(item => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${item.orOrder || ''}</td>
+                    <td>${item.fileName || ''}</td>
+                    <td><span class="badge ${getSeverityClass(item.severity)}">${item.severity}</span></td>
+                    <td>${item.status || ''}</td>
+                    <td>${item.fieldName || '-'}</td>
+                    <td>${formatValue(item.oldValue)}</td>
+                    <td>${formatValue(item.newValue)}</td>
+                    <td>${formatValue(item.difference)}</td>
+                    <td>${formatNumber(item.monthlyInvoice)}</td>
+                `;
+                row.dataset.orOrder = item.orOrder;
+                row.dataset.severity = item.severity;
+                row.dataset.status = item.status;
+            });
+        }
+
+        function displayNewEntriesTable(data) {
+            const tbody = document.getElementById('newEntryTableBody');
+            tbody.innerHTML = '';
+
+            const headers = newFileData.headers;
+            const indices = {
+                orOrder: headers.findIndex(h => h === 'OR Order'),
+                pttOrder: headers.findIndex(h => h === 'PTT Order'),
+                plant: headers.findIndex(h => h === 'Plant'),
+                description: headers.findIndex(h => h === 'Description'),
+                estimateCost: headers.findIndex(h => h === 'Estimate Cost'),
+                monthlyInvoice: headers.findIndex(h => h === 'Monthly OR Invoice'),
+                postingDate: headers.findIndex(h => h === 'Posting date'),
+                status: headers.findIndex(h => h === 'OR User Status')
+            };
+
+            data.forEach(rowData => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${rowData[indices.orOrder] || ''}</td>
+                    <td>${rowData[indices.pttOrder] || ''}</td>
+                    <td>${rowData[indices.plant] || ''}</td>
+                    <td style="max-width: 300px; white-space: normal;">${rowData[indices.description] || ''}</td>
+                    <td>${formatNumber(rowData[indices.estimateCost])}</td>
+                    <td>${formatNumber(rowData[indices.monthlyInvoice])}</td>
+                    <td>${formatDateThai(rowData[indices.postingDate])}</td>
+                    <td>${rowData[indices.status] || ''}</td>
+                `;
+            });
+        }
+
+        function displayMismatchesTable(data) {
+            const tbody = document.getElementById('mismatchTableBody');
+            tbody.innerHTML = '';
+
+            const headers = newFileData.headers;
+            const indices = {
+                orOrder: headers.findIndex(h => h === 'OR Order'),
+                pttOrder: headers.findIndex(h => h === 'PTT Order'),
+                plant: headers.findIndex(h => h === 'Plant'),
+                description: headers.findIndex(h => h === 'Description'),
+                monthlyInvoice: headers.findIndex(h => h === 'Monthly OR Invoice'),
+                postingDate: headers.findIndex(h => h === 'Posting date'),
+                approveStatus: headers.findIndex(h => h === 'PTT Approve Status'),
+                orStatus: headers.findIndex(h => h === 'OR User Status')
+            };
+
+            data.forEach(rowData => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${rowData[indices.orOrder] || ''}</td>
+                    <td>${rowData[indices.pttOrder] || ''}</td>
+                    <td>${rowData[indices.plant] || ''}</td>
+                    <td style="max-width: 300px; white-space: normal;">${rowData[indices.description] || ''}</td>
+                    <td>${formatNumber(rowData[indices.monthlyInvoice])}</td>
+                    <td>${formatDateThai(rowData[indices.postingDate])}</td>
+                    <td>${rowData[indices.approveStatus] || ''}</td>
+                    <td>${rowData[indices.orStatus] || ''}</td>
+                `;
+            });
+        }
+
+        function displayRemovedTable(data) {
+            const tbody = document.getElementById('removedTableBody');
+            tbody.innerHTML = '';
+
+            const headers = oldFileData.headers;
+            const indices = {
+                orOrder: headers.findIndex(h => h === 'OR Order'),
+                pttOrder: headers.findIndex(h => h === 'PTT Order'),
+                plant: headers.findIndex(h => h === 'Plant'),
+                description: headers.findIndex(h => h === 'Description'),
+                monthlyInvoice: headers.findIndex(h => h === 'Monthly OR Invoice'),
+                status: headers.findIndex(h => h === 'OR User Status')
+            };
+
+            data.forEach(rowData => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${rowData[indices.orOrder] || ''}</td>
+                    <td>${rowData[indices.pttOrder] || ''}</td>
+                    <td>${rowData[indices.plant] || ''}</td>
+                    <td style="max-width: 300px; white-space: normal;">${rowData[indices.description] || ''}</td>
+                    <td>${formatNumber(rowData[indices.monthlyInvoice])}</td>
+                    <td>${rowData[indices.status] || ''}</td>
+                `;
+            });
+        }
+
+        function getSeverityClass(severity) {
+            if (severity.includes('Critical')) return 'critical';
+            if (severity.includes('Medium')) return 'medium';
+            return 'low';
+        }
+
+        function formatValue(value) {
+            if (value === null || value === undefined) return '-';
+            if (typeof value === 'number') return formatNumber(value);
+            return value;
+        }
+
+        function formatNumber(num) {
+            if (num === null || num === undefined || num === '') return '-';
+            return Number(num).toLocaleString('th-TH', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        function filterTables() {
+            const severityFilter = document.getElementById('severityFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const orSearch = document.getElementById('orSearch').value.toLowerCase();
+
+            const tbody = document.getElementById('allTableBody');
+            const rows = tbody.getElementsByTagName('tr');
+
+            for (let row of rows) {
+                let show = true;
+
+                // Use dataset if available, otherwise fallback to cell content
+                const orOrder = (row.dataset.orOrder || row.cells[0]?.textContent || '').toLowerCase();
+                const severity = row.dataset.severity || row.cells[2]?.textContent || '';
+                const status = row.dataset.status || row.cells[3]?.textContent || '';
+
+                if (severityFilter && !severity.includes(severityFilter)) {
+                    show = false;
+                }
+
+                if (statusFilter && status !== statusFilter) {
+                    show = false;
+                }
+
+                if (orSearch && !orOrder.includes(orSearch)) {
+                    show = false;
+                }
+
+                row.style.display = show ? '' : 'none';
+            }
+        }
+
+        function exportToExcel() {
+            const wb = XLSX.utils.book_new();
+
+            // Export Change Summary
+            const changeSummaryWS = XLSX.utils.json_to_sheet(
+                comparisonResults.changeSummary.map(item => ({
+                    'OR Order': item.orOrder,
+                    'File Name': item.fileName,
+                    'Row Index': item.rowIndex,
+                    'Severity': item.severity,
+                    'Status': item.status,
+                    'Field Name': item.fieldName,
+                    'Old Value': item.oldValue,
+                    'New Value': item.newValue,
+                    'Difference': item.difference,
+                    'Monthly Invoice': item.monthlyInvoice
+                }))
+            );
+            XLSX.utils.book_append_sheet(wb, changeSummaryWS, 'Change_Summary');
+
+            // Download
+            XLSX.writeFile(wb, `Opex_Comparison_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        function exportToCSV() {
+            let csv = 'OR Order,File Name,Row Index,Severity,Status,Field Name,Old Value,New Value,Difference,Monthly Invoice\n';
+
+            comparisonResults.changeSummary.forEach(item => {
+                csv += `${item.orOrder},"${item.fileName}",${item.rowIndex},"${item.severity}","${item.status}","${item.fieldName || ''}","${item.oldValue || ''}","${item.newValue || ''}","${item.difference || ''}",${item.monthlyInvoice}\n`;
+            });
+
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Opex_Comparison_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>
